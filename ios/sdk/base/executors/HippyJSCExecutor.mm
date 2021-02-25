@@ -45,12 +45,12 @@
 #import "HippyBridge+LocalFileSource.h"
 #include "ios_loader.h"
 #import "HippyBridge+Private.h"
-#include "js_native_api_jsc.h"
-#include "javascript_task.h"
-#include "js_native_api.h"
-#include "scope.h"
-#include "javascript_task_runner.h"
-#include "engine.h"
+#include "core/napi/jsc/js_native_api_jsc.h"
+#include "core/task/javascript_task.h"
+#include "core/napi/js_native_api.h"
+#include "core/scope.h"
+#include "core/task/javascript_task_runner.h"
+#include "core/engine.h"
 
 NSString *const HippyJSCThreadName = @"com.tencent.hippy.JavaScript";
 NSString *const HippyJavaScriptContextCreatedNotification = @"HippyJavaScriptContextCreatedNotification";
@@ -443,18 +443,20 @@ HIPPY_EXPORT_METHOD(setContextName:(NSString *)contextName)
                 std::shared_ptr<hippy::napi::CtxValue> batchedbridge_value = jsccontext->GetGlobalObjVar("__fbBatchedBridge");
                 std::shared_ptr<hippy::napi::JSCCtxValue> jsc_resultValue = nullptr;
                 std::string exception;
+                JSContext *jsContext = [strongSelf JSContext];
+                JSGlobalContextRef globalContextRef = [strongSelf JSGlobalContextRef];
+                if (!jsContext || !globalContextRef) {
+                    onComplete([NSNull null], nil);
+                    return;
+                }
                 if (batchedbridge_value) {
                     std::shared_ptr<hippy::napi::CtxValue> method_value = jsccontext->GetProperty(batchedbridge_value, [method UTF8String]);
                     if (method_value) {
                         if (jsccontext->IsFunction(method_value)) {
                             std::shared_ptr<hippy::napi::CtxValue> function_params[arguments.count];
-                            if (arguments.count > 0) {
-                                JSContext *context = [strongSelf JSContext];
-                                JSGlobalContextRef globalContextRef = [strongSelf JSGlobalContextRef];
-                                for (NSUInteger i = 0; i < arguments.count; i++) {
-                                    JSValueRef value = [JSValue valueWithObject:arguments[i] inContext:context].JSValueRef;
-                                    function_params[i] = std::make_shared<hippy::napi::JSCCtxValue>(globalContextRef, value);
-                                }
+                            for (NSUInteger i = 0; i < arguments.count; i++) {
+                                JSValueRef value = [JSValue valueWithObject:arguments[i] inContext:jsContext].JSValueRef;
+                                function_params[i] = std::make_shared<hippy::napi::JSCCtxValue>(globalContextRef, value);
                             }
                             std::shared_ptr<hippy::napi::CtxValue> resultValue = jsccontext->CallFunction(method_value, arguments.count, function_params, &exception);
                             jsc_resultValue = std::static_pointer_cast<hippy::napi::JSCCtxValue>(resultValue);

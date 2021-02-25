@@ -31,6 +31,11 @@ module.exports = {
       manifest,
     }),
     new HippyDynamicImportPlugin(),
+    // LimitChunkCountPlugin can control dynamic import ability
+    // Using 1 will prevent any additional chunks from being added
+    // new webpack.optimize.LimitChunkCountPlugin({
+    //   maxChunks: 1,
+    // }),
   ],
   module: {
     rules: [
@@ -40,6 +45,7 @@ module.exports = {
           {
             loader: 'babel-loader',
             options: {
+              sourceType: 'unambiguous',
               presets: [
                 '@babel/preset-react',
                 [
@@ -52,7 +58,9 @@ module.exports = {
                 ],
               ],
               plugins: [
-                '@babel/plugin-proposal-class-properties',
+                ['@babel/plugin-proposal-class-properties'],
+                ['@babel/plugin-proposal-decorators', { legacy: true }],
+                ['@babel/plugin-transform-runtime', { regenerator: true }],
               ],
             },
           },

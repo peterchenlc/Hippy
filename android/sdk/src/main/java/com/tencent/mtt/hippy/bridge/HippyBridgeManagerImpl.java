@@ -40,6 +40,7 @@ import com.tencent.mtt.hippy.utils.GrowByteBuffer;
 import com.tencent.mtt.hippy.utils.UIThreadUtils;
 
 import java.util.ArrayList;
+import org.json.JSONObject;
 
 public class HippyBridgeManagerImpl implements HippyBridgeManager, HippyBridge.BridgeCallback, Handler.Callback
 {
@@ -169,13 +170,13 @@ public class HippyBridgeManagerImpl implements HippyBridgeManager, HippyBridge.B
 						return true;
 					}
 					final String bundleUniKey = loader.getBundleUniKey();
+					final HippyRootView localRootView = rootView;
 					if (loader != null && mLoadedBundleInfo != null && !TextUtils.isEmpty(bundleUniKey) && mLoadedBundleInfo.contains(bundleUniKey))
 					{
-						notifyModuleLoaded(HippyEngine.STATUS_VARIABLE_UNINIT, "load module error. loader.getBundleUniKey=null",null);
+						notifyModuleLoaded(HippyEngine.STATUS_REPEAT_LOAD, "repeat load module. loader.getBundleUniKey=" + bundleUniKey, localRootView);
 						return true;
 					}
 
-					final HippyRootView localRootView = rootView;
 					if (!TextUtils.isEmpty(bundleUniKey)) {
 						loader.load(mHippyBridge, new NativeCallback(mHandler) {
 							@Override
@@ -191,12 +192,12 @@ public class HippyBridgeManagerImpl implements HippyBridgeManager, HippyBridge.B
 									else
 										notifyModuleLoaded(HippyEngine.STATUS_WRONG_STATE, "load module error. loader.load failed. check the file.", null);
 								} else {
-									notifyModuleLoaded(HippyEngine.STATUS_WRONG_STATE, "load module error. loader.load failed. check the file.", null);
+									notifyModuleLoaded(HippyEngine.STATUS_ERR_RUN_BUNDLE, "load module error. loader.load failed. check the file.", null);
 								}
 							}
 						});
 					} else {
-						notifyModuleLoaded(HippyEngine.STATUS_VARIABLE_UNINIT, "load module error. loader.getBundleUniKey=null",null);
+						notifyModuleLoaded(HippyEngine.STATUS_VARIABLE_UNINIT, "can not load module. loader.getBundleUniKey=null",null);
 					}
 
 					return true;
@@ -352,49 +353,49 @@ public class HippyBridgeManagerImpl implements HippyBridgeManager, HippyBridge.B
 		mHandler.sendMessage(message);
 	}
 
-  public void notifyModuleJsException(final HippyJsException exception)
-  {
-    if (UIThreadUtils.isOnUiThread()) {
-      if(mLoadModuleListener != null && mLoadModuleListener.onJsException(exception)) {
-        mLoadModuleListener = null;
-      }
-    }
-    else
-    {
-      UIThreadUtils.runOnUiThread(new Runnable()
-      {
-        @Override
-        public void run()
-        {
-          if(mLoadModuleListener != null && mLoadModuleListener.onJsException(exception)) {
-            mLoadModuleListener = null;
-          }
-        }
-      });
-    }
-  }
+	public void notifyModuleJsException(final HippyJsException exception)
+	{
+		if (UIThreadUtils.isOnUiThread()) {
+			if(mLoadModuleListener != null && mLoadModuleListener.onJsException(exception)) {
+				mLoadModuleListener = null;
+			}
+		}
+		else
+		{
+			UIThreadUtils.runOnUiThread(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					if(mLoadModuleListener != null && mLoadModuleListener.onJsException(exception)) {
+						mLoadModuleListener = null;
+					}
+				}
+			});
+		}
+	}
 
-  private void notifyModuleLoaded(final int statusCode, final String msg,final HippyRootView hippyRootView)
-  {
-    if (UIThreadUtils.isOnUiThread()) {
-      if(mLoadModuleListener != null) {
-        mLoadModuleListener.onInitialized(statusCode, msg,hippyRootView);
-        //mLoadModuleListener = null;
-      }
-    }
-    else
-    {
-      UIThreadUtils.runOnUiThread(new Runnable() {
-        @Override
-        public void run() {
-          if(mLoadModuleListener != null) {
-            mLoadModuleListener.onInitialized(statusCode, msg, hippyRootView);
-            //mLoadModuleListener = null;
-          }
-        }
-      });
-    }
-  }
+	private void notifyModuleLoaded(final int statusCode, final String msg,final HippyRootView hippyRootView)
+	{
+		if (UIThreadUtils.isOnUiThread()) {
+			if(mLoadModuleListener != null) {
+				mLoadModuleListener.onInitialized(statusCode, msg,hippyRootView);
+				//mLoadModuleListener = null;
+			}
+		}
+		else
+		{
+			UIThreadUtils.runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					if(mLoadModuleListener != null) {
+						mLoadModuleListener.onInitialized(statusCode, msg, hippyRootView);
+						//mLoadModuleListener = null;
+					}
+				}
+			});
+		}
+	}
 
 	@Override
 	public void loadInstance(String name, int id, HippyMap params)
@@ -542,10 +543,13 @@ public class HippyBridgeManagerImpl implements HippyBridgeManager, HippyBridge.B
 		String pageUrl = "";
 		String appName = "";
 		String appVersion = "";
+		HippyMap extraDataMap = new HippyMap();
 		if (mThirdPartyAdapter != null) {
 			appName = mThirdPartyAdapter.getPackageName();
 			appVersion = mThirdPartyAdapter.getAppVersion();
 			pageUrl = mThirdPartyAdapter.getPageUrl();
+			JSONObject jObject = mThirdPartyAdapter.getExtraData();
+			extraDataMap.pushJSONObject(jObject);
 		}
 
 		HippyMap platformParams = new HippyMap();
@@ -560,28 +564,29 @@ public class HippyBridgeManagerImpl implements HippyBridgeManager, HippyBridge.B
 		tkd.pushString("url", (pageUrl == null) ? "" : pageUrl);
 		tkd.pushString("appName", (appName == null) ? "" : appName);
 		tkd.pushString("appVersion", (appVersion == null) ? "" : appVersion);
+		tkd.pushMap("extra", extraDataMap);
 		globalParams.pushMap("tkd", tkd);
 
 		return ArgumentUtils.objectToJson(globalParams);
 	}
 
-  private boolean getNightMode() {
-    int currentNightMode = mContext.getGlobalConfigs().getContext().getResources().getConfiguration().uiMode
-      & Configuration.UI_MODE_NIGHT_MASK;
-    switch (currentNightMode) {
-      case Configuration.UI_MODE_NIGHT_UNDEFINED:
-        // We don't know what mode we're in, assume notnight
-        return false;
-      case Configuration.UI_MODE_NIGHT_NO:
-        // Night mode is not active, we're in day time
-        return false;
-      case Configuration.UI_MODE_NIGHT_YES:
-        // Night mode is active, we're at night!
-        return true;
-      default:
-        return false;
-    }
-  }
+	private boolean getNightMode() {
+		int currentNightMode = mContext.getGlobalConfigs().getContext().getResources().getConfiguration().uiMode
+				& Configuration.UI_MODE_NIGHT_MASK;
+		switch (currentNightMode) {
+			case Configuration.UI_MODE_NIGHT_UNDEFINED:
+				// We don't know what mode we're in, assume notnight
+				return false;
+			case Configuration.UI_MODE_NIGHT_NO:
+				// Night mode is not active, we're in day time
+				return false;
+			case Configuration.UI_MODE_NIGHT_YES:
+				// Night mode is active, we're at night!
+				return true;
+			default:
+				return false;
+		}
+	}
 
 	@Override
 	public HippyThirdPartyAdapter getThirdPartyAdapter() {
