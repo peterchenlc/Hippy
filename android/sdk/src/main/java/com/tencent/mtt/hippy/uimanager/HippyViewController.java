@@ -24,8 +24,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import com.tencent.mtt.hippy.HippyEngineContext;
+import com.tencent.mtt.hippy.HippyGlobalConfigs;
 import com.tencent.mtt.hippy.HippyInstanceContext;
 import com.tencent.mtt.hippy.HippyRootView;
+import com.tencent.mtt.hippy.adapter.dt.HippyDtAdapter;
 import com.tencent.mtt.hippy.annotation.HippyControllerProps;
 import com.tencent.mtt.hippy.common.HippyArray;
 import com.tencent.mtt.hippy.common.HippyMap;
@@ -44,7 +46,7 @@ import java.util.Map;
 public abstract class HippyViewController<T extends View & HippyViewBase> implements View.OnFocusChangeListener
 {
 	private static final String	TAG						     = "HippyViewController";
-	
+
 	private static MatrixUtil.MatrixDecompositionContext	sMatrixDecompositionContext		= new MatrixUtil.MatrixDecompositionContext();
 	private static double[]									sTransformDecompositionArray	= new double[16];
     private boolean bUserChageFocus = false;
@@ -170,7 +172,7 @@ public abstract class HippyViewController<T extends View & HippyViewBase> implem
 	/**
 	 * please use createViewImpl(Context context,HippyMap iniProps) instead ,it
 	 * will be removed no longer
-	 * 
+	 *
 	 * @param context
 	 * @return
 	 */
@@ -497,6 +499,42 @@ public abstract class HippyViewController<T extends View & HippyViewBase> implem
 		}
 	}
 
+  @HippyControllerProps(name = "pageParams", defaultType = HippyControllerProps.MAP)
+  public void setDtPageParams(T view, HippyMap params) {
+    HippyDtAdapter dtAdapter = getDtAdapter(view.getContext());
+    if (dtAdapter == null) {
+      return;
+    }
+    dtAdapter.setDtPageParams(view, params);
+  }
+
+  @HippyControllerProps(name = "elementParams", defaultType = HippyControllerProps.MAP)
+  public void setDtElementParams(T view, HippyMap params) {
+    HippyDtAdapter dtAdapter = getDtAdapter(view.getContext());
+    if (dtAdapter == null) {
+      return;
+    }
+    dtAdapter.setDtElementParams(view, params);
+  }
+
+  private HippyDtAdapter getDtAdapter(Context context) {
+    if (!(context instanceof HippyInstanceContext)) {
+      return null;
+    }
+
+    HippyInstanceContext instanceContext = (HippyInstanceContext) context;
+    HippyEngineContext engineContext = instanceContext.getEngineContext();
+    if (engineContext == null) {
+      return null;
+    }
+
+    HippyGlobalConfigs globalConfigs = engineContext.getGlobalConfigs();
+    if (globalConfigs == null) {
+      return null;
+    }
+
+    return globalConfigs.getDtAdapter();
+  }
 
 	@HippyControllerProps(name = NodeProps.ON_LONG_CLICK, defaultType = HippyControllerProps.BOOLEAN)
 	public void setLongClickable(T view, boolean flag)
@@ -670,7 +708,7 @@ public abstract class HippyViewController<T extends View & HippyViewBase> implem
 
 	/***
 	 * batch complete
-	 * 
+	 *
 	 * @param view
 	 */
 	public void onBatchComplete(T view)
