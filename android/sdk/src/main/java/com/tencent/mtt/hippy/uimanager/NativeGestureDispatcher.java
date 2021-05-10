@@ -21,7 +21,7 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import com.tencent.mtt.hippy.HippyEngineContext;
 import com.tencent.mtt.hippy.HippyInstanceContext;
-import com.tencent.mtt.hippy.HippyRootView;
+import com.tencent.mtt.hippy.adapter.monitor.HippyEngineMonitorAdapter;
 import com.tencent.mtt.hippy.common.HippyMap;
 import com.tencent.mtt.hippy.dom.node.NodeProps;
 import com.tencent.mtt.hippy.modules.javascriptmodules.EventDispatcher;
@@ -30,11 +30,7 @@ import com.tencent.mtt.hippy.utils.PixelUtil;
 
 import java.util.HashSet;
 
-/**
- * FileName: NativeGestureDispatcher
- * Description：
- * History：
- */
+@SuppressWarnings({"deprecation", "unused"})
 public class NativeGestureDispatcher implements NativeGestureProcessor.Callback
 {
 	private static final String				TAG						= "NativeGestureDispatcher";
@@ -44,7 +40,7 @@ public class NativeGestureDispatcher implements NativeGestureProcessor.Callback
 	private static final String				KEY_PAGE_Y				= "page_y";
 	private static final int				TAP_TIMEOUT				= ViewConfiguration.getTapTimeout();
 
-	private static View.OnClickListener		mOnClickListener		= new View.OnClickListener()
+	private static final View.OnClickListener mOnClickListener = new View.OnClickListener()
 																	{
 																		@Override
 																		public void onClick(final View view)
@@ -57,15 +53,15 @@ public class NativeGestureDispatcher implements NativeGestureProcessor.Callback
 																					public void run()
 																					{
 																						int tagId = view.getId();
-																						handleClick(((HippyInstanceContext) view.getContext())
-																								.getEngineContext(), tagId);
+																						handleClick(view, ((HippyInstanceContext)view.getContext())
+																								.getEngineContext(), tagId, false);
 																					}
 																				}, TAP_TIMEOUT);
 																			}
 
 																		}
 																	};
-	private static View.OnLongClickListener	mOnLongClickListener	= new View.OnLongClickListener()
+	private static final View.OnLongClickListener mOnLongClickListener = new View.OnLongClickListener()
 																	{
 																		@Override
 																		public boolean onLongClick(final View view)
@@ -89,7 +85,7 @@ public class NativeGestureDispatcher implements NativeGestureProcessor.Callback
 																		}
 																	};
 
-	private static View.OnAttachStateChangeListener mOnAttachedToWindowListener = new View.OnAttachStateChangeListener()
+	private static final View.OnAttachStateChangeListener mOnAttachedToWindowListener = new View.OnAttachStateChangeListener()
 																				{
 
 																					@Override
@@ -110,7 +106,7 @@ public class NativeGestureDispatcher implements NativeGestureProcessor.Callback
 																					}
 																				};
 
-	private static View.OnAttachStateChangeListener mOnDetachedFromWindowListener = new View.OnAttachStateChangeListener()
+	private static final View.OnAttachStateChangeListener mOnDetachedFromWindowListener = new View.OnAttachStateChangeListener()
 																				{
 
 																					@Override
@@ -131,9 +127,8 @@ public class NativeGestureDispatcher implements NativeGestureProcessor.Callback
 																					}
 																				};
 
-	private View							mTargetView;
-	//	int										mTagId;
-	private HashSet<String>					mGestureTypes			= null;
+	private final View						mTargetView;
+	private HashSet<String>					mGestureTypes = null;
 	private NativeGestureProcessor			mGestureProcessor;
 	private HippyEngineContext				mEngineContext;
 
@@ -166,12 +161,16 @@ public class NativeGestureDispatcher implements NativeGestureProcessor.Callback
 		return mOnDetachedFromWindowListener;
 	}
 
-	public static void handleClick(HippyEngineContext context, int tagId)
-	{
-		if (context == null)
-		{
+	public static void handleClick(View target, HippyEngineContext context, int tagId, boolean isCustomEvent) {
+		if (context == null) {
 			return;
 		}
+
+		HippyEngineMonitorAdapter monitorAdapter = context.getGlobalConfigs().getEngineMonitorAdapter();
+		if (monitorAdapter != null && target != null) {
+			monitorAdapter.reportClickEvent(target, isCustomEvent);
+		}
+
 		HippyMap params = new HippyMap();
 		params.pushString(KEY_EVENT_NAME, NodeProps.ON_CLICK);
 		params.pushInt(KEY_TAG_ID, tagId);
@@ -316,7 +315,7 @@ public class NativeGestureDispatcher implements NativeGestureProcessor.Callback
 	{
 		if (mGestureTypes == null)
 		{
-			mGestureTypes = new HashSet<String>();
+			mGestureTypes = new HashSet<>();
 		}
 		mGestureTypes.add(type);
 	}

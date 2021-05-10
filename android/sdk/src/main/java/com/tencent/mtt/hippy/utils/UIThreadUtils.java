@@ -18,13 +18,11 @@ package com.tencent.mtt.hippy.utils;
 import android.os.Handler;
 import android.os.Looper;
 
-/**
- * 1.0 xiandongluo on 2017/11/13
- */
+@SuppressWarnings({"unused"})
 public class UIThreadUtils
 {
 
-	private static Handler sMainHandler = new Handler(Looper.getMainLooper());;
+	private static final Handler sMainHandler = new Handler(Looper.getMainLooper());
 
 	public static void assertOnUiThread()
 	{

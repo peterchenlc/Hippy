@@ -27,18 +27,14 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * FileName: DefaultStorageAdapter
- * Description：
- * History：
- */
+@SuppressWarnings("unused")
 public class DefaultStorageAdapter implements HippyStorageAdapter
 {
 
-	static final int			MAX_SQL_KEYS	= 999;
-	private IHippySQLiteHelper	mSQLiteHelper;
-	private Executor			mExecutor;
-	private ExecutorService 	mExecutorService;
+	static final int			     MAX_SQL_KEYS = 999;
+	private final IHippySQLiteHelper mSQLiteHelper;
+	private Executor			     mExecutor;
+	private ExecutorService 	     mExecutorService;
 
 	public DefaultStorageAdapter(Context context)
 	{
@@ -79,6 +75,7 @@ public class DefaultStorageAdapter implements HippyStorageAdapter
 	{
 		execute(new Runnable()
 		{
+			@SuppressWarnings("TryFinallyCanBeTryWithResources")
 			@Override
 			public void run()
 			{
@@ -93,8 +90,8 @@ public class DefaultStorageAdapter implements HippyStorageAdapter
 
 					String[] columns = { IHippySQLiteHelper.COLUMN_KEY, IHippySQLiteHelper.COLUMN_VALUE };
 					HashSet<String> keysRemaining = new HashSet<>();
-					HashMap<String, HippyStorageKeyValue> data = new HashMap<String, HippyStorageKeyValue>();
-					ArrayList finalData = new ArrayList();
+					HashMap<String, HippyStorageKeyValue> data = new HashMap<>();
+					@SuppressWarnings("rawtypes") ArrayList finalData = new ArrayList();
 					for (int keyStart = 0; keyStart < keys.size(); keyStart += MAX_SQL_KEYS)
 					{
 						int keyCount = Math.min(keys.size() - keyStart, MAX_SQL_KEYS);
@@ -148,10 +145,12 @@ public class DefaultStorageAdapter implements HippyStorageAdapter
 					for (index = 0; index < size; index++)
 					{
 						key = keys.getString(index);
+						//noinspection unchecked
 						finalData.add(data.get(key));
 					}
 					data.clear();
 
+					//noinspection unchecked
 					callback.onSuccess(finalData);
 				}
 				catch (Throwable e)
@@ -260,6 +259,7 @@ public class DefaultStorageAdapter implements HippyStorageAdapter
 	{
 		execute(new Runnable()
 		{
+			@SuppressWarnings("TryFinallyCanBeTryWithResources")
 			@Override
 			public void run()
 			{
@@ -322,7 +322,7 @@ public class DefaultStorageAdapter implements HippyStorageAdapter
 		}
 	}
 
-    public void destroyIfNeed()
+	public void destroyIfNeed()
 	{
 		if(mExecutorService != null && !mExecutorService.isShutdown())
 		{
@@ -333,5 +333,5 @@ public class DefaultStorageAdapter implements HippyStorageAdapter
 		if (mSQLiteHelper != null) {
 			mSQLiteHelper.onDestroy();
 		}
-    }
+	}
 }

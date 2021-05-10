@@ -24,22 +24,21 @@ import com.tencent.mtt.hippy.uimanager.RenderNode;
 import android.content.Context;
 import android.view.View;
 
+@SuppressWarnings("rawtypes")
 @HippyController(name = HippyCustomPropsController.CLASS_NAME)
 public class HippyCustomPropsController extends HippyViewController
 {
 	public static final String CLASS_NAME = "CustomProps";
 	public static final String DT_EBLID = "dt_elementBizLeafIdentifier";
 
+	@SuppressWarnings("unused")
 	@Override
 	protected View createViewImpl(Context context)
 	{
 		return null;
 	}
 
-	public void setCustomProps(View view, String methodName, Object props) {
-
-	}
-
+	@SuppressWarnings("unused")
 	protected void onSetDTElementBizLeafIdentifier(View view) {
 		if (view == null) {
 			return;
@@ -49,6 +48,7 @@ public class HippyCustomPropsController extends HippyViewController
 		if (context instanceof HippyInstanceContext) {
 			HippyEngineContext engineContext = ((HippyInstanceContext)context).getEngineContext();
 			assert (engineContext != null);
+			//noinspection ConstantConditions
 			if (engineContext == null) {
 				return;
 			}

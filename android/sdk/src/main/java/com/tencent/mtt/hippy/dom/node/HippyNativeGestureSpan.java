@@ -24,28 +24,20 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import com.tencent.mtt.hippy.HippyEngineContext;
 import com.tencent.mtt.hippy.HippyInstanceContext;
-import com.tencent.mtt.hippy.adapter.monitor.HippyEngineMonitorAdapter;
 import com.tencent.mtt.hippy.uimanager.NativeGestureDispatcher;
 import com.tencent.mtt.hippy.uimanager.NativeGestureProcessor;
 
 import java.util.ArrayList;
 
-/**
- * Copyright (C) 2005-2020 TENCENT Inc.All Rights Reserved.
- * FileName: HippyNativeGestureSpan
- * Description：
- * History：
- */
+@SuppressWarnings({"deprecation", "unused"})
 public class HippyNativeGestureSpan implements NativeGestureProcessor.Callback
 {
 	static final int				LONG_CLICK			= 3;
 	private static final int		LONGPRESS_TIMEOUT	= ViewConfiguration.getLongPressTimeout();
 	private static final int		TAP_TIMEOUT			= ViewConfiguration.getTapTimeout();
 	boolean							mInLongPress		= false;
-	int								mTagId;
-	private ArrayList<String>		mGestureTypes		= null;
-	private int						startX				= 0;
-	private int						startY				= 0;
+	final int						mTagId;
+	private ArrayList<String>		mGestureTypes;
 	private int						lastX				= 0;
 	private int						lastY				= 0;
 	private int						mViewId;
@@ -54,7 +46,7 @@ public class HippyNativeGestureSpan implements NativeGestureProcessor.Callback
 	private Handler					mHandler;
 	private HippyEngineContext		mContext;
 
-	private boolean					mIsVirtual;
+	private final boolean			mIsVirtual;
 
 	HippyNativeGestureSpan(int tagId, boolean isVirtual)
 	{
@@ -68,7 +60,7 @@ public class HippyNativeGestureSpan implements NativeGestureProcessor.Callback
 		return mIsVirtual;
 	}
 
-	public void addGestureTypes(ArrayList types)
+	public void addGestureTypes(ArrayList<String> types)
 	{
 		mGestureTypes = types;
 	}
@@ -104,9 +96,6 @@ public class HippyNativeGestureSpan implements NativeGestureProcessor.Callback
 		{
 			case MotionEvent.ACTION_DOWN:
 			{
-				startX = x;
-				startY = y;
-
 				handle = true;
 				mInLongPress = false;
 				if (mGestureTypes.contains(NodeProps.ON_LONG_CLICK))
@@ -143,8 +132,7 @@ public class HippyNativeGestureSpan implements NativeGestureProcessor.Callback
 						}
 						else
 						{
-							NativeGestureDispatcher.handleClick(mContext, mTagId);
-							reportCustomClickEvent(view);
+							NativeGestureDispatcher.handleClick(view, mContext, mTagId, true);
 						}
 					}
 				}
@@ -172,15 +160,6 @@ public class HippyNativeGestureSpan implements NativeGestureProcessor.Callback
 		lastY = y;
 		return handle;
 
-	}
-
-	private void reportCustomClickEvent(View view) {
-		if (mContext != null && view != null) {
-			HippyEngineMonitorAdapter monitorAdapter = mContext.getGlobalConfigs().getEngineMonitorAdapter();
-			if (monitorAdapter != null) {
-				monitorAdapter.reportClickEvent(view);
-			}
-		}
 	}
 
 	@Override
@@ -233,13 +212,8 @@ public class HippyNativeGestureSpan implements NativeGestureProcessor.Callback
 		@Override
 		public void handleMessage(Message msg)
 		{
-			switch (msg.what)
-			{
-				case LONG_CLICK:
-				{
-					mInLongPress = true;
-					break;
-				}
+			if (msg.what == LONG_CLICK) {
+				mInLongPress = true;
 			}
 		}
 	}

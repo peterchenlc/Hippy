@@ -1,10 +1,10 @@
-const fs          = require('fs');
-const path        = require('path');
-const readline    = require('readline');
+const fs = require('fs');
+const path = require('path');
+const readline = require('readline');
 // FIXME: I have no idea the config have no effect in eslintrc, disabled the rule here.
 /* eslint-disable-next-line import/no-extraneous-dependencies */
-const babel       = require('@babel/core');
-const package     = require('../package.json');
+const babel = require('@babel/core');
+const package = require('../package.json');
 
 /**
  * Babel configuration for iOS compiling
@@ -124,7 +124,7 @@ function getAllRequiredFiles(platform) {
 
     rl.on('line', (line) => {
       if (line.split('//')[0].indexOf('require') > -1) {
-        const entry = line.split("('")[1].split("')")[0];
+        const entry = line.split('(\'')[1].split('\')')[0];
         filePaths.push(getAbsolutePath(`../core/js/entry/${platform}/${entry}`));
       }
     });

@@ -28,8 +28,6 @@
 #import "HippyComponent.h"
 #import "HippyPointerEvents.h"
 
-
-
 @protocol HippyAutoInsetsProtocol;
 
 @class HippyView;
@@ -74,6 +72,12 @@
  * removeClippedSubviews set to YES
  */
 - (void)updateClippedSubviews;
+
+/**
+ * get content for layer
+ * return YES if getting content synchronized,else return NO
+ */
+- (BOOL)getLayerContentForColor:(UIColor *)color completionBlock:(void (^)(UIImage *))contentBlock;
 
 /**
  * Border radii.

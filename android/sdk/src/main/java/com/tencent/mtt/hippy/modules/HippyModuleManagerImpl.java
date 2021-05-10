@@ -30,29 +30,26 @@ import com.tencent.mtt.hippy.modules.javascriptmodules.HippyJavaScriptModuleInvo
 import com.tencent.mtt.hippy.modules.nativemodules.HippyNativeModuleBase;
 import com.tencent.mtt.hippy.modules.nativemodules.HippyNativeModuleInfo;
 
+import com.tencent.mtt.hippy.utils.LogUtils;
 import java.lang.reflect.Proxy;
 import java.util.*;
 
-/**
- * FileName: HippyModuleManagerImpl
- * Description：
- * History：
- */
+@SuppressWarnings({"unchecked", "unused", "rawtypes"})
 public class HippyModuleManagerImpl implements HippyModuleManager, Handler.Callback
 {
 
 	private static final int														MSG_CODE_CALL_NATIVES	= 1;
 	private static final int														MSG_CODE_DESTROY_MODULE	= 2;
 	//Only multi-threaded read
-	private HashMap<String, HippyNativeModuleInfo>									mNativeModuleInfo;
+	private final HashMap<String, HippyNativeModuleInfo>							mNativeModuleInfo;
 	//Only multi-threaded read
-	private HashMap<Class<? extends HippyJavaScriptModule>, HippyJavaScriptModule>	mJsModules;
-	private HippyEngineContext														mContext;
+	private final HashMap<Class<? extends HippyJavaScriptModule>, HippyJavaScriptModule> mJsModules;
+	private final HippyEngineContext												mContext;
 	private boolean																	isDestroyed				= false;
 	private volatile Handler														mUIThreadHandler;
 	private volatile Handler														mBridgeThreadHandler;
 	private volatile Handler														mDomThreadHandler;
-	private HippyModuleANRMonitor													mANRMonitor;
+	private final HippyModuleANRMonitor												mANRMonitor;
 
 	public HippyModuleManagerImpl(HippyEngineContext context, List<HippyAPIProvider> packages)
 	{
@@ -71,8 +68,7 @@ public class HippyModuleManagerImpl implements HippyModuleManager, Handler.Callb
 					HippyNativeModuleInfo moduleInfo = new HippyNativeModuleInfo(cls, nativeModules.get(cls));
 					String[] names = moduleInfo.getNames();
 					if (names != null && names.length > 0) {
-						for (int i = 0; i < names.length; i++) {
-							String name = names[i];
+						for (String name : names) {
 							if (!mNativeModuleInfo.containsKey(name)) {
 								mNativeModuleInfo.put(name, moduleInfo);
 							}
@@ -94,6 +90,7 @@ public class HippyModuleManagerImpl implements HippyModuleManager, Handler.Callb
 				for (Class cls : jsModules)
 				{
 					String name = getJavaScriptModuleName(cls);
+					//noinspection SuspiciousMethodCalls
 					if (mJsModules.containsKey(name))
 					{
 						throw new RuntimeException("There is already a javascript module named : " + name);
@@ -228,7 +225,7 @@ public class HippyModuleManagerImpl implements HippyModuleManager, Handler.Callb
 	@Override
 	public synchronized <T extends HippyNativeModuleBase> T getNativeModule(Class<T> cls)
 	{
-		HippyNativeModule annotation = (HippyNativeModule) cls.getAnnotation(HippyNativeModule.class);
+		HippyNativeModule annotation = cls.getAnnotation(HippyNativeModule.class);
 		if (annotation != null)
 		{
 			String name = annotation.name();
@@ -344,6 +341,7 @@ public class HippyModuleManagerImpl implements HippyModuleManager, Handler.Callb
 				}
 				catch (Throwable e)
 				{
+					LogUtils.d("HippyModuleManagerImpl", "handleMessage: " + e.getMessage());
 				}
 				finally
 				{
@@ -367,7 +365,7 @@ public class HippyModuleManagerImpl implements HippyModuleManager, Handler.Callb
 				}
 				catch (Throwable e)
 				{
-
+					LogUtils.d("HippyModuleManagerImpl", "handleMessage: " + e.getMessage());
 				}
 				return true;
 			}

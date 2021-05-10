@@ -16,8 +16,8 @@
 package com.tencent.mtt.hippy.uimanager;
 
 import android.annotation.SuppressLint;
+import android.content.res.Resources.NotFoundException;
 import android.text.TextUtils;
-import android.util.Log;
 import android.util.SparseArray;
 import android.view.View;
 import android.view.ViewGroup;
@@ -43,15 +43,14 @@ import com.tencent.mtt.hippy.views.view.HippyViewGroupController;
 import java.lang.reflect.Field;
 import java.util.List;
 
+@SuppressWarnings({"deprecation", "unchecked", "rawtypes", "unused"})
 public class ControllerManager implements HippyInstanceLifecycleEventListener
 {
 
-	HippyEngineContext									mContext;
-	ControllerRegistry									mControllerRegistry;
-	ControllerUpdateManger<HippyViewController, View>	mControllerUpdateManger;
-	SparseArray<View>									mPreCacheView	= new SparseArray<>();
-
-	private static final String							TAG				= "ControllerManager";
+	final HippyEngineContext								mContext;
+	final ControllerRegistry								mControllerRegistry;
+	final ControllerUpdateManger<HippyViewController, View>	mControllerUpdateManger;
+	final SparseArray<View>									mPreCacheView	= new SparseArray<>();
 
 	public ControllerManager(HippyEngineContext context, List<HippyAPIProvider> hippyPackages)
 	{
@@ -74,6 +73,7 @@ public class ControllerManager implements HippyInstanceLifecycleEventListener
 				for (Class hippyComponent : components)
 				{
 					HippyController hippyNativeModule = (HippyController) hippyComponent.getAnnotation(HippyController.class);
+					assert hippyNativeModule != null;
 					String name = hippyNativeModule.name();
 					String[] names = hippyNativeModule.names();
 					boolean lazy = hippyNativeModule.isLazyLoad();
@@ -81,17 +81,13 @@ public class ControllerManager implements HippyInstanceLifecycleEventListener
 					{
 						ControllerHolder holder = new ControllerHolder((HippyViewController) hippyComponent.newInstance(), lazy);
 						mControllerRegistry.addControllerHolder(name, holder);
-						if (names != null && names.length > 0) {
-							for (int i = 0; i < names.length; i++) {
-								mControllerRegistry.addControllerHolder(names[i], holder);
+						if (names.length > 0) {
+							for (String s : names) {
+								mControllerRegistry.addControllerHolder(s, holder);
 							}
 						}
 					}
-					catch (InstantiationException e)
-					{
-						e.printStackTrace();
-					}
-					catch (IllegalAccessException e)
+					catch (InstantiationException | IllegalAccessException e)
 					{
 						e.printStackTrace();
 					}
@@ -173,12 +169,16 @@ public class ControllerManager implements HippyInstanceLifecycleEventListener
 		return view;
 	}
 
-	public StyleNode createStyleNode(String className, boolean isVirtual)
-	{
-		return mControllerRegistry.getViewController(className).createNode(isVirtual);
-	}
+  public StyleNode createStyleNode(String className, boolean isVirtual, int rootId) {
+    StyleNode tempNode = mControllerRegistry.getViewController(className).createNode(isVirtual, rootId);
+    if (tempNode != null) {
+      return tempNode;
+    }
+    return mControllerRegistry.getViewController(className).createNode(isVirtual);
+  }
 
-	public void updateView(int id, String name, HippyMap newProps)
+
+  public void updateView(int id, String name, HippyMap newProps)
 	{
 		View view = mControllerRegistry.getView(id);
 		HippyViewController viewComponent = mControllerRegistry.getViewController(name);
@@ -273,7 +273,7 @@ public class ControllerManager implements HippyInstanceLifecycleEventListener
 		{
 			//			Toast.makeText(mControllerRegistry.getRootView(mControllerRegistry.getRootIDAt(0)).getContext(),"replaceID时候出异常了",Toast.LENGTH_LONG).show();
 			//			Debug.waitForDebugger();
-			Log.e("HippyListView", "error replaceID null oldId " + oldId);
+			LogUtils.d("HippyListView", "error replaceID null oldId " + oldId);
 			// throw new RuntimeException("replaceID error");
 			//			mContext.getGlobalConfigs().getLogAdapter().log(TAG, " replaceID null oldId " + oldId +" newID:"+newId);
 			//			mContext.getGlobalConfigs().getLogAdapter().upload(new HippyLogAdapter.callBack() {
@@ -334,17 +334,13 @@ public class ControllerManager implements HippyInstanceLifecycleEventListener
 			return;
 		}
 		HippyViewController hippyChildViewController = null;
-		Object childTagString = HippyTag.getClassName(child);
-		if (childTagString instanceof String)
+		String childTagString = HippyTag.getClassName(child);
+		if (!TextUtils.isEmpty(childTagString))
 		{
-			String childClassName = (String)childTagString;
-			if (!TextUtils.isEmpty(childClassName))
+			hippyChildViewController = mControllerRegistry.getViewController(childTagString);
+			if (hippyChildViewController != null)
 			{
-				hippyChildViewController = mControllerRegistry.getViewController(childClassName);
-				if (hippyChildViewController != null)
-				{
-					hippyChildViewController.onViewDestroy(child);
-				}
+				hippyChildViewController.onViewDestroy(child);
 			}
 		}
 
@@ -372,14 +368,14 @@ public class ControllerManager implements HippyInstanceLifecycleEventListener
 			return;
 		}
 
-		Object parentTagString = HippyTag.getClassName(viewParent);
-		if (parentTagString instanceof String)
+		String parentTagString = HippyTag.getClassName(viewParent);
+		if (parentTagString != null)
 		{
-			String className = (String)parentTagString;
 			//remove component Like listView there is a RecycleItemView is not js UI
-			if (mControllerRegistry.getControllerHolder(className) != null)
+			if (mControllerRegistry.getControllerHolder(parentTagString) != null)
 			{
-				HippyViewController hippyViewController = mControllerRegistry.getViewController(className);
+				HippyViewController hippyViewController = mControllerRegistry.getViewController(
+						parentTagString);
 				hippyViewController.deleteChild(viewParent, child, childIndex);
 				//				LogUtils.d("HippyListView", "delete " + child.getId());
 			}
@@ -421,15 +417,16 @@ public class ControllerManager implements HippyInstanceLifecycleEventListener
 			return statusBarHeight;
 		}
 
-		Class<?> c = null;
-		Object obj = null;
-		Field field = null;
-		int x = 0;
+		Class<?> c;
+		Object obj;
+		Field field;
+		int x;
 		try
 		{
 			c = Class.forName("com.android.internal.R$dimen");
 			obj = c.newInstance();
 			field = c.getField("status_bar_height");
+			//noinspection ConstantConditions
 			x = Integer.parseInt(field.get(obj).toString());
 			statusBarHeight = ContextHolder.getAppContext().getResources().getDimensionPixelSize(x);
 		}
@@ -439,11 +436,14 @@ public class ControllerManager implements HippyInstanceLifecycleEventListener
 			e1.printStackTrace();
 		}
 
-		if (statusBarHeight < 1)
-		{
-			int statebarH_id = ContextHolder.getAppContext().getResources()
-					.getIdentifier("statebar_height", "dimen", ContextHolder.getAppContext().getPackageName());
-			statusBarHeight = Math.round(ContextHolder.getAppContext().getResources().getDimension(statebarH_id));
+		if (statusBarHeight < 1) {
+			try {
+				int statebarH_id = ContextHolder.getAppContext().getResources()
+						.getIdentifier("statebar_height", "dimen", ContextHolder.getAppContext().getPackageName());
+				statusBarHeight = Math.round(ContextHolder.getAppContext().getResources().getDimension(statebarH_id));
+			} catch (NotFoundException e) {
+				LogUtils.d("ControllerManager", "getStatusBarHeightFromSystem: " + e.getMessage());
+			}
 		}
 		return statusBarHeight;
 	}
@@ -458,8 +458,8 @@ public class ControllerManager implements HippyInstanceLifecycleEventListener
 		}
 		else
 		{
-			int outputBuffer[] = new int[4];
-			int statusBarHeight = 0;
+			int[] outputBuffer = new int[4];
+			int statusBarHeight;
 			try
 			{
 				v.getLocationOnScreen(outputBuffer);

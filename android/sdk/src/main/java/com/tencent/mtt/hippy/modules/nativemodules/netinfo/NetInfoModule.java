@@ -28,12 +28,9 @@ import com.tencent.mtt.hippy.common.HippyMap;
 import com.tencent.mtt.hippy.modules.Promise;
 import com.tencent.mtt.hippy.modules.javascriptmodules.EventDispatcher;
 import com.tencent.mtt.hippy.modules.nativemodules.HippyNativeModuleBase;
+import com.tencent.mtt.hippy.utils.LogUtils;
 
-/**
- * FileName: NetInfoModule
- * Description：
- * History：
- */
+@SuppressWarnings({"deprecation","unused"})
 @HippyNativeModule(name = "NetInfo")
 public class NetInfoModule extends HippyNativeModuleBase
 {
@@ -125,6 +122,7 @@ public class NetInfoModule extends HippyNativeModuleBase
 			}
 			catch (Throwable e)
 			{
+				LogUtils.d("NetInfoModule", "registerReceiver: " + e.getMessage());
 			}
 		}
 	}
@@ -142,6 +140,7 @@ public class NetInfoModule extends HippyNativeModuleBase
 		}
 		catch (Throwable e)
 		{
+			LogUtils.d("NetInfoModule", "unregisterReceiver: " + e.getMessage());
 		}
 	}
 
@@ -183,7 +182,7 @@ public class NetInfoModule extends HippyNativeModuleBase
 							}
 							catch (Throwable e)
 							{
-
+								LogUtils.d("ConnectivityReceiver", "onReceive: " + e.getMessage());
 							}
 						}
 					}

@@ -20,30 +20,25 @@
  *
  */
 
-#ifndef HIPPY_MODULE_LOADER_IOS_LOADER_H_
-#define HIPPY_MODULE_LOADER_IOS_LOADER_H_
+#pragma once
 
 #include "core/core.h"
 
-typedef std::string (*NormalizeFuncPtr)(const std::string& uri);
-typedef std::string (*LoadFuncPtr)(const std::string& uri);
+typedef bool (*RequestUntrustedContentPtr)(const std::string& uri, std::function<void(std::string)> cb, CFTypeRef userData);
 
 class IOSLoader : public hippy::base::UriLoader {
  public:
-  IOSLoader(NormalizeFuncPtr normalize, LoadFuncPtr load);
-  IOSLoader(const std::string& base);
+  IOSLoader(RequestUntrustedContentPtr loader, CFTypeRef userData);
 
-  virtual ~IOSLoader(){};
+  virtual ~IOSLoader();
 
-  virtual std::string Normalize(const std::string& uri);
-  virtual std::string Load(const std::string& uri);
+  virtual bool RequestUntrustedContent(const std::string& uri, std::function<void(std::string)> cb);
 
- protected:
-  std::string base_;
-  NormalizeFuncPtr normalize_;
-  LoadFuncPtr load_;
+  virtual std::string RequestUntrustedContent(const std::string& uri) {
+    return "";
+  };
+
+ private:
+  RequestUntrustedContentPtr loader_;
+  CFTypeRef userData_;
 };
-
-#endif  // HIPPY_MODULE_LOADER_IOS_LOADER_H_
-
-

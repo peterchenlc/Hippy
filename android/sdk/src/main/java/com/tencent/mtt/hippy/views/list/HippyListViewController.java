@@ -29,19 +29,22 @@ import com.tencent.mtt.supportui.views.recyclerview.RecyclerViewBase;
 import com.tencent.mtt.supportui.views.recyclerview.RecyclerViewItem;
 
 import android.content.Context;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 
-/**
- * Created by leonardgong on 2017/12/7 0007.
- */
-
+@SuppressWarnings({"deprecation","unused"})
 @HippyController(name = HippyListViewController.CLASS_NAME)
 public class HippyListViewController extends HippyViewController<HippyListView>
 {
-
 	public static final String CLASS_NAME = "ListView";
+
+	@Override
+	public void onViewDestroy(HippyListView hippyListView) {
+		super.onViewDestroy(hippyListView);
+		if (hippyListView != null && hippyListView.mListScrollListeners != null) {
+			hippyListView.mListScrollListeners.clear();
+		}
+	}
 
 	@Override
 	protected void addView(ViewGroup parentView, View view, int index)
@@ -115,37 +118,37 @@ public class HippyListViewController extends HippyViewController<HippyListView>
 		view.setHasSuspentedItem(enable);
 	}
 
-	@HippyControllerProps(name = "onScrollBeginDrag", defaultType = HippyControllerProps.BOOLEAN, defaultBoolean = false)
+	@HippyControllerProps(name = "onScrollBeginDrag", defaultType = HippyControllerProps.BOOLEAN)
 	public void setScrollBeginDragEventEnable(HippyListView view, boolean flag)
 	{
 		view.setScrollBeginDragEventEnable(flag);
 	}
 
-	@HippyControllerProps(name = "onScrollEndDrag", defaultType = HippyControllerProps.BOOLEAN, defaultBoolean = false)
+	@HippyControllerProps(name = "onScrollEndDrag", defaultType = HippyControllerProps.BOOLEAN)
 	public void setScrollEndDragEventEnable(HippyListView view, boolean flag)
 	{
 		view.setScrollEndDragEventEnable(flag);
 	}
 
-	@HippyControllerProps(name = "onMomentumScrollBegin", defaultType = HippyControllerProps.BOOLEAN, defaultBoolean = false)
+	@HippyControllerProps(name = "onMomentumScrollBegin", defaultType = HippyControllerProps.BOOLEAN)
 	public void setMomentumScrollBeginEventEnable(HippyListView view, boolean flag)
 	{
 		view.setMomentumScrollBeginEventEnable(flag);
 	}
 
-	@HippyControllerProps(name = "onMomentumScrollEnd", defaultType = HippyControllerProps.BOOLEAN, defaultBoolean = false)
+	@HippyControllerProps(name = "onMomentumScrollEnd", defaultType = HippyControllerProps.BOOLEAN)
 	public void setMomentumScrollEndEventEnable(HippyListView view, boolean flag)
 	{
 		view.setMomentumScrollEndEventEnable(flag);
 	}
 
-	@HippyControllerProps(name = "onScrollEnable", defaultType = HippyControllerProps.BOOLEAN, defaultBoolean = false)
+	@HippyControllerProps(name = "onScrollEnable", defaultType = HippyControllerProps.BOOLEAN)
 	public void setOnScrollEventEnable(HippyListView view, boolean flag)
 	{
 		view.setOnScrollEventEnable(flag);
 	}
 
-	@HippyControllerProps(name = "exposureEventEnabled", defaultType = HippyControllerProps.BOOLEAN, defaultBoolean = false)
+	@HippyControllerProps(name = "exposureEventEnabled", defaultType = HippyControllerProps.BOOLEAN)
 	public void setExposureEventEnable(HippyListView view, boolean flag)
 	{
 		view.setExposureEventEnable(flag);
@@ -166,11 +169,17 @@ public class HippyListViewController extends HippyViewController<HippyListView>
 	@HippyControllerProps(name = "preloadItemNumber")
 	public void setPreloadItemNumber(HippyListView view, int preloadItemNumber)
 	{
-		RecyclerViewBase.Adapter adapter = view.getAdapter();
+		RecyclerViewBase.Adapter<?> adapter = view.getAdapter();
 		if (adapter instanceof HippyListAdapter)
 		{
 			((HippyListAdapter)adapter).setPreloadItemNumber(preloadItemNumber);
 		}
+	}
+
+	@HippyControllerProps(name = "overScrollEnabled", defaultType = HippyControllerProps.BOOLEAN, defaultBoolean = true)
+	public void setOverScrollEnabled(HippyListView view, boolean flag)
+	{
+		view.setOverScrollEnabled(flag);
 	}
 
 	@Override
@@ -199,11 +208,11 @@ public class HippyListViewController extends HippyViewController<HippyListView>
 				view.scrollToContentOffset(xOffset, yOffset, animated,duration);
 				break;
 			}
-      case "scrollToTop":
-      {
-        view.scrollToTop(null);
-        break;
-      }
+			case "scrollToTop":
+			{
+				view.scrollToTop(null);
+				break;
+			}
 		}
 	}
 }

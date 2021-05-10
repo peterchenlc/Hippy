@@ -15,32 +15,19 @@
  */
 package com.tencent.mtt.hippy.devsupport;
 
-import android.app.Activity;
-
 import com.tencent.mtt.hippy.HippyGlobalConfigs;
 import com.tencent.mtt.hippy.HippyRootView;
 
-/**
- * @author: edsheng
- * @date: 2017/11/14 18:39
- * @version: V1.0
- */
-
+@SuppressWarnings({"unused"})
 public class DevSupportManager
 {
-
-	DevServerInterface	mDevImp	= null;
-	boolean				mSupportDev;
+	final DevServerInterface	mDevImp;
+	final boolean				mSupportDev;
 
 	public DevSupportManager(HippyGlobalConfigs configs, boolean enableDev, String serverHost, String bundleName)
 	{
 		this.mDevImp = DevFactory.create(configs, enableDev, serverHost, bundleName);
 		mSupportDev = enableDev;
-	}
-
-	public boolean supportDev()
-	{
-		return mSupportDev;
 	}
 
 	public void setDevCallback(DevServerCallBack devCallback)
@@ -56,11 +43,6 @@ public class DevSupportManager
 	public void detachFromHost(HippyRootView view)
 	{
 		mDevImp.detachFromHost(view);
-	}
-
-	public void init(DevRemoteDebugProxy remoteDebugManager)
-	{
-
 	}
 
 	public String createResourceUrl(String resName) {

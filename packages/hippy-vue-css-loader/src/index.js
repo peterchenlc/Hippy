@@ -5,7 +5,7 @@ import { GLOBAL_STYLE_NAME } from '@vue/runtime/constants';
 import parseCSS from './css-parser';
 import translateColor from './color-parser';
 
-let sourceId              = 0;
+let sourceId = 0;
 
 /**
  * Convert the CSS text to AST that able to parse by selector parser.
@@ -15,7 +15,7 @@ function hippyVueCSSLoader(source) {
   const parsed = parseCSS(source, { source: sourceId });
   sourceId += 1;
   const rulesAst = parsed.stylesheet.rules.filter(n => n.type === 'rule').map((n) => {
-    const rule = {
+    return {
       selectors: n.selectors,
       declarations: n.declarations.map((dec) => {
         let { value } = dec;
@@ -30,7 +30,6 @@ function hippyVueCSSLoader(source) {
         };
       }),
     };
-    return rule;
   });
   const code = `(function() {
     if (!global['${GLOBAL_STYLE_NAME}']) {

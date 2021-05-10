@@ -20,10 +20,52 @@
 | actions*        | 动画方案，其实是一个样式值跟上它的动画方案，详情请参考范例。 | Object                                | `ALL`    |
 
 * actions 详解
+  
+  和 React 不同，它将单个动画 Animation 和动画序列 AnimationSet 合二为一了，其实方法特别简单，发现是个对象就是 Animation，如果是个数组就是动画序列就用 AnimationSet 处理，单个动画参数具体参考 [Animation 模块](../hippy-react/modules.md?id=animation)和 [范例](https://github.com/Tencent/Hippy/tree/master/examples/hippy-vue-demo/src/components/native-demos/animations)。需要说明 hippy-vue 的动画参数有一些[默认值](https://github.com/Tencent/Hippy/blob/master/packages/hippy-vue-native-components/src/animation.js#L5)，只有差异部分才需要填写。
 
-和 React 不同，它将单个动画 Animation 和动画序列 AnimationSet 合二为一了，其实方法特别简单，发现是个对象就是 Animation，如果是个数组就是动画序列就用 AnimationSet 处理，单个动画参数具体参考 [Animation 模块](../hippy-react/modules.md?id=animation)，和[范例](https://github.com/Tencent/Hippy/tree/master/examples/hippy-vue-demo/src/components/native-demos/animations)。
+  特别说明，对 actions 替换后会自动新建动画，需手动启动新动画。有两种处理方式：
+  * 替换 actions => 延迟一定时间后（如setTimeout） 调用 `this.[animation ref].start()`（推荐）
+  * `playing = false` =>  替换 actions =>  延迟一定时间后（如setTimeout） `playing = true`
+  
+  2.6.0 版本新增 `backgroundColor` 背景色渐变动画支持，参考 [渐变色动画DEMO](https://github.com/Tencent/Hippy/blob/master/examples/hippy-vue-demo/src/components/native-demos/animations/color-change.vue)
+  * 设置 `actions` 对 `backgroundColor` 进行修饰
+  * 设置 `valueType` 为 `color`
+  * 设置 `startValue` 和 `toValue` 为 [color值](style/color.md)
 
-需要说明 hippy-vue 的动画参数有一些[默认值](https://github.com/Tencent/Hippy/blob/master/packages/hippy-vue-native-components/src/animation.js#L4)，只有差异部分才需要填写。
+## 事件
+
+> 最低支持版本 2.5.2
+
+| 参数          | 描述                                                         | 类型                                      | 支持平台 |
+| ------------- | ------------------------------------------------------------ | ----------------------------------------- | -------- |
+| start              | 动画开始时触发                                                            | `Function`                                                    | `ALL`    |
+| end         | 动画结束时触发                                                            | `Function`| `ALL`    |
+| repeat | 每次循环播放时触发                                                            | `Function` | `Android`    |
+| cancel    | 动画取消时触发                                         | `Function`                                                    | `ALL`    |
+
+## 方法
+
+> 最低支持版本 2.5.2
+
+### start
+
+`() => void` 手动触发动画开始（`playing`属性置为`true`也会自动触发`start`函数调用）
+
+### pause
+
+`() => void` 手动触发动画暂停（`playing`属性置为`false`也会自动触发`pause`函数调用）
+
+### resume
+
+`() => void` 手动触发动画继续（`playing`属性置为`false`后再置为`true`会自动触发`resume`函数调用）
+
+### create
+
+`() => void` 手动触发动画创建
+
+### reset
+
+`() => void` 重置开始标记
 
 # dialog
 
@@ -101,8 +143,6 @@
 ### startRefresh
 
 `() => void` 手动告知终端开始刷新，下拉刷新栏。
-
-## 事件
 
 ## 事件
 

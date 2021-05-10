@@ -18,6 +18,7 @@ package com.tencent.mtt.hippy.modules;
 import android.os.SystemClock;
 import com.tencent.mtt.hippy.HippyEngineContext;
 import com.tencent.mtt.hippy.adapter.monitor.HippyEngineMonitorAdapter;
+import com.tencent.mtt.hippy.utils.LogUtils;
 import com.tencent.mtt.supportui.utils.struct.Pools;
 
 import java.util.Map;
@@ -34,7 +35,7 @@ public class HippyModuleANRMonitor
 	static final int							ANR_TIME				= 100;
 	static final int							MONITOR_ID_NAN			= 0;
 	static int									MONITOR_ID				= 0;
-	HippyEngineContext							mContext;
+	final HippyEngineContext					mContext;
 	boolean										mNeedReportBridgeANR	= false;
 	HippyEngineMonitorAdapter					mEngineMonitorAdapter;
 	ConcurrentHashMap<Integer, MonitorMessage>	mMonitorMessages;
@@ -48,6 +49,7 @@ public class HippyModuleANRMonitor
 			this.mNeedReportBridgeANR = mEngineMonitorAdapter.needReportBridgeANR();
 			if (mNeedReportBridgeANR)
 			{
+				//noinspection unchecked,rawtypes
 				mMonitorMessages = new ConcurrentHashMap();
 			}
 		}
@@ -117,6 +119,7 @@ public class HippyModuleANRMonitor
 		}
 	}
 
+	@SuppressWarnings({"unused"})
 	static class MonitorMessage
 	{
 		private static final int									POOL_SIZE		= 20;
@@ -152,7 +155,7 @@ public class HippyModuleANRMonitor
 			}
 			catch (Throwable e)
 			{
-
+				LogUtils.d("MonitorMessage", "onDispose: " + e.getMessage());
 			}
 		}
 	}

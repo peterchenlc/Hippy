@@ -19,6 +19,7 @@ import com.tencent.mtt.hippy.HippyRootView;
 
 import java.util.List;
 
+@SuppressWarnings({"unused"})
 public class DefaultEngineMonitorAdapter implements HippyEngineMonitorAdapter
 {
 
@@ -63,7 +64,7 @@ public class DefaultEngineMonitorAdapter implements HippyEngineMonitorAdapter
 	}
 
 	@Override
-	public void reportClickEvent(Object object) {
+	public void reportClickEvent(Object object, boolean isCustomEvent) {
 
 	}
 }

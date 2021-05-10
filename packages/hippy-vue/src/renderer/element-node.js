@@ -180,6 +180,14 @@ class ElementNode extends ViewNode {
       case 'caretColor':
         this.attributes['caret-color'] = colorParser(v);
         break;
+      case 'backgroundImage': {
+        const regexp = /(?:\(['"]?)(.*?)(?:['"]?\))/;
+        const executed = regexp.exec(v);
+        if (executed && executed.length > 1) {
+          [, v] = executed;
+        }
+        break;
+      }
       default: {
         // Convert the property to W3C standard.
         if (Object.prototype.hasOwnProperty.call(PROPERTIES_MAP, p)) {
@@ -348,7 +356,7 @@ class ElementNode extends ViewNode {
   /**
    * Scroll children to specific position.
    */
-  scrollToPosition(x = 0, y = 0, duration = 1000)  {
+  scrollToPosition(x = 0, y = 0, duration = 1000) {
     if (typeof x !== 'number' || typeof y !== 'number') {
       return;
     }

@@ -1,31 +1,32 @@
 /*!
-* iOS SDK
-*
-* Tencent is pleased to support the open source community by making
-* Hippy available.
-*
-* Copyright (C) 2019 THL A29 Limited, a Tencent company.
-* All rights reserved.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * iOS SDK
+ *
+ * Tencent is pleased to support the open source community by making
+ * Hippy available.
+ *
+ * Copyright (C) 2019 THL A29 Limited, a Tencent company.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #import "HippyViewPager.h"
 #import "UIView+Hippy.h"
 #import "HippyLog.h"
 #import "float.h"
+#import "HippyViewPagerItem.h"
 
-@interface HippyViewPager()
+@interface HippyViewPager ()
 @property (nonatomic, strong) NSMutableArray<UIView *> *viewPagerItems;
 @property (nonatomic, assign) BOOL isScrolling;
 @property (nonatomic, assign) BOOL loadOnce;
@@ -37,15 +38,14 @@
 @property (nonatomic, assign) NSUInteger lastPageIndex;
 @property (nonatomic, assign) CGFloat targetContentOffsetX;
 @property (nonatomic, assign) BOOL didFirstTimeLayout;
-@property (nonatomic, assign) BOOL invokeOnPageSelected;
 @property (nonatomic, assign) BOOL needsLayoutItems;
+@property (nonatomic, assign) BOOL needsResetPageIndex;
 
 @end
 
 @implementation HippyViewPager
 #pragma mark life cycle
-- (instancetype)initWithFrame:(CGRect)frame
-{
+- (instancetype)initWithFrame:(CGRect)frame {
     if ((self = [super initWithFrame:frame])) {
         self.viewPagerItems = [NSMutableArray new];
         self.pagingEnabled = YES;
@@ -67,18 +67,42 @@
 
 #pragma mark hippy native methods
 
-- (void)insertHippySubview:(UIView *)view atIndex:(NSInteger)atIndex
-{
+- (void)insertHippySubview:(UIView *)view atIndex:(NSInteger)atIndex {
     if (atIndex > self.viewPagerItems.count) {
         HippyLogWarn(@"Error In HippyViewPager: addSubview —— out of bound of array");
         return;
     }
-    
-    [super insertHippySubview:view atIndex:(  NSInteger)atIndex];
+    if (atIndex < [self.viewPagerItems count]) {
+        UIView *viewAtIndex = [self.viewPagerItems objectAtIndex:atIndex];
+        view.frame = viewAtIndex.frame;
+    }
+    [super insertHippySubview:view atIndex:(NSInteger)atIndex];
     [self.viewPagerItems insertObject:view atIndex:atIndex];
+    
+    if ([view isKindOfClass:[HippyViewPagerItem class]]) {
+        HippyViewPagerItem *item = (HippyViewPagerItem *)view;
+        __weak HippyViewPager *weakPager = self;
+        item.frameSetBlock = ^CGRect(CGRect frame) {
+            NSInteger index = atIndex;
+            if (weakPager) {
+                HippyViewPager *strongPager = weakPager;
+                CGRect finalFrame = [strongPager frameForItemAtIndex:index];
+                return finalFrame;
+            }
+            return frame;
+        };
+    }
+    
+    self.needsLayoutItems = YES;
     if (_itemsChangedBlock) {
         _itemsChangedBlock([self.viewPagerItems count]);
     }
+}
+
+- (CGRect)frameForItemAtIndex:(NSInteger)index {
+    CGSize viewPagerSize = self.bounds.size;
+    CGFloat originX = viewPagerSize.width * index;
+    return CGRectMake(originX, 0, viewPagerSize.width, viewPagerSize.height);
 }
 
 - (void)removeHippySubview:(UIView *)subview {
@@ -91,14 +115,13 @@
 
 - (void)hippySetFrame:(CGRect)frame {
     [super hippySetFrame:frame];
-    self.invokeOnPageSelected = YES;
     self.needsLayoutItems = YES;
+    self.needsResetPageIndex = YES;
     [self setNeedsLayout];
 }
 
 - (void)didUpdateHippySubviews {
     [super didUpdateHippySubviews];
-    self.invokeOnPageSelected = NO;
     self.needsLayoutItems = YES;
     [self setNeedsLayout];
 }
@@ -113,20 +136,16 @@
         HippyLogWarn(@"Error In ViewPager setPage: pageNumber invalid");
         return;
     }
-    
+
+    _lastPageIndex = pageNumber;
     UIView *theItem = self.viewPagerItems[pageNumber];
     self.targetContentOffsetX = CGRectGetMinX(theItem.frame);
     [self setContentOffset:theItem.frame.origin animated:animated];
-    if (self.onPageSelected && _lastPageIndex != pageNumber) {
-        self.onPageSelected(@{
-                              @"position": @(pageNumber)
-                              });
-        _lastPageIndex = pageNumber;
+    if (self.onPageSelected) {
+        self.onPageSelected(@{ @"position": @(pageNumber) });
     }
     if (self.onPageScrollStateChanged) {
-        self.onPageScrollStateChanged(@{
-                                        @"pageScrollState": @"idle"
-                                        });
+        self.onPageScrollStateChanged(@{ @"pageScrollState": @"idle" });
     }
 }
 
@@ -134,9 +153,7 @@
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView {
     if (self.onPageScrollStateChanged) {
         NSString *state = scrollView.isDragging ? @"dragging" : @"settling";
-        self.onPageScrollStateChanged(@{
-                                        @"pageScrollState": state
-                                        });
+        self.onPageScrollStateChanged(@{ @"pageScrollState": state });
     }
     NSInteger beforePage = self.pageOfBeginDragging;
     CGFloat commonPagerWidth = [self commonPagerWidth];
@@ -147,22 +164,21 @@
     if (offsetRate != 0) {
         NSInteger nowPage = 0;
         if (CGFLOAT_MAX == self.targetContentOffsetX) {
-            nowPage = offsetRate < 0 ? beforePage - 1: beforePage + 1;//-1 for left slide，1 for right;
+            nowPage = offsetRate < 0 ? beforePage - 1 : beforePage + 1;  //-1 for left slide，1 for right;
             if (nowPage == -1) {
                 nowPage = 0;
             }
             if (nowPage == self.viewPagerItems.count) {
-                nowPage = self.viewPagerItems.count -1;
+                nowPage = self.viewPagerItems.count - 1;
             }
-        }
-        else {
+        } else {
             nowPage = [self targetPageIndexFromTargetContentOffsetX:self.targetContentOffsetX];
         }
         if (self.onPageScroll) {
             self.onPageScroll(@{
-                                @"position": @(nowPage),
-                                @"offset": @(offsetRate),
-                                });
+                @"position": @(nowPage),
+                @"offset": @(offsetRate),
+            });
         }
     }
     for (NSObject<UIScrollViewDelegate> *scrollViewListener in _scrollViewListener) {
@@ -188,9 +204,7 @@
     self.targetContentOffsetX = targetContentOffset->x;
     NSUInteger page = [self targetPageIndexFromTargetContentOffsetX:self.targetContentOffsetX];
     if (self.onPageSelected) {
-        self.onPageSelected(@{
-                              @"position": @(page)
-                              });
+        self.onPageSelected(@{ @"position": @(page) });
     }
     for (NSObject<UIScrollViewDelegate> *scrollViewListener in _scrollViewListener) {
         if ([scrollViewListener respondsToSelector:@selector(scrollViewWillEndDragging:withVelocity:targetContentOffset:)]) {
@@ -217,9 +231,7 @@
 
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
     if (self.onPageScrollStateChanged) {
-        self.onPageScrollStateChanged(@{
-                                        @"pageScrollState": @"idle"
-                                        });
+        self.onPageScrollStateChanged(@{ @"pageScrollState": @"idle" });
     }
     self.isScrolling = NO;
     for (NSObject<UIScrollViewDelegate> *scrollViewListener in _scrollViewListener) {
@@ -246,23 +258,21 @@
 }
 
 #pragma mark scrollview listener methods
-- (void)addScrollListener:(id<UIScrollViewDelegate>)scrollListener
-{
-    [_scrollViewListener addObject: scrollListener];
+- (void)addScrollListener:(id<UIScrollViewDelegate>)scrollListener {
+    [_scrollViewListener addObject:scrollListener];
 }
 
-- (void)removeScrollListener:(id<UIScrollViewDelegate>)scrollListener
-{
-    [_scrollViewListener removeObject: scrollListener];
+- (void)removeScrollListener:(id<UIScrollViewDelegate>)scrollListener {
+    [_scrollViewListener removeObject:scrollListener];
 }
 
 #pragma mark other methods
 - (NSUInteger)targetPageIndexFromTargetContentOffsetX:(CGFloat)targetContentOffsetX {
     NSInteger thePage = -1;
-    if (fabs(targetContentOffsetX)<FLT_EPSILON) {
+    if (fabs(targetContentOffsetX) < FLT_EPSILON) {
         thePage = 0;
-    }else{
-        for (int i = 0;i < self.viewPagerItems.count;i++) {
+    } else {
+        for (int i = 0; i < self.viewPagerItems.count; i++) {
             UIView *pageItem = self.viewPagerItems[i];
             CGPoint point = [self middlePointOfView:pageItem];
             if (point.x > targetContentOffsetX) {
@@ -273,14 +283,13 @@
     }
     if (thePage == -1) {
         thePage = 0;
-    }else if (thePage >= self.viewPagerItems.count) {
-        thePage = self.viewPagerItems.count -1;
+    } else if (thePage >= self.viewPagerItems.count) {
+        thePage = self.viewPagerItems.count - 1;
     }
     if (_lastPageIndex != thePage) {
         _lastPageIndex = thePage;
         return thePage;
-    }
-    else {
+    } else {
         return _lastPageIndex;
     }
 }
@@ -289,12 +298,12 @@
     return [_viewPagerItems count];
 }
 
-- (void) setContentOffset:(CGPoint)contentOffset {
+- (void)setContentOffset:(CGPoint)contentOffset {
     _targetOffset = contentOffset;
     [super setContentOffset:contentOffset];
 }
 
-- (void) setContentOffset:(CGPoint)contentOffset animated:(BOOL)animated {
+- (void)setContentOffset:(CGPoint)contentOffset animated:(BOOL)animated {
     _targetOffset = contentOffset;
     [super setContentOffset:contentOffset animated:animated];
 }
@@ -306,15 +315,13 @@
     return self.viewPagerItems[0].frame.size.width;
 }
 
-
 - (void)hippyBridgeDidFinishTransaction {
     BOOL isFrameEqual = CGRectEqualToRect(self.frame, self.previousFrame);
     BOOL isContentSizeEqual = CGSizeEqualToSize(self.contentSize, self.previousSize);
-    
+
     if (!isContentSizeEqual || !isFrameEqual) {
         self.previousFrame = self.frame;
         self.previousSize = self.contentSize;
-        self.invokeOnPageSelected = YES;
         self.needsLayoutItems = YES;
         [self setNeedsLayout];
     }
@@ -325,37 +332,27 @@
     if (!self.needsLayoutItems) {
         return;
     }
-    if (!self.viewPagerItems.count) return;
+    self.needsLayoutItems = NO;
+    if (!self.viewPagerItems.count) {
+        return;
+    }
     for (int i = 1; i < self.viewPagerItems.count; ++i) {
         UIView *lastViewPagerItem = self.viewPagerItems[i - 1];
         UIView *theViewPagerItemItem = self.viewPagerItems[i];
         CGPoint lastViewPagerItemRightPoint = [self rightPointOfView:lastViewPagerItem];
         CGRect theFrame = CGRectMake(
-                lastViewPagerItemRightPoint.x,
-                lastViewPagerItemRightPoint.y,
-                theViewPagerItemItem.frame.size.width,
-                theViewPagerItemItem.frame.size.height
-        );
+                                     lastViewPagerItemRightPoint.x,
+                                     lastViewPagerItemRightPoint.y,
+                                     theViewPagerItemItem.frame.size.width,
+                                     theViewPagerItemItem.frame.size.height
+                                     );
         theViewPagerItemItem.frame = theFrame;
     }
-    
+
     if (self.initialPage >= self.viewPagerItems.count) {
         HippyLogWarn(@"Error In HippyViewPager: layoutSubviews");
         self.contentSize = CGSizeZero;
         return;
-    }
-    
-    //如果是第一次加载，那么走initialPage的逻辑
-    if (!_didFirstTimeLayout) {
-        UIView *theItem = self.viewPagerItems[self.initialPage];
-        self.contentOffset = theItem.frame.origin;
-        _didFirstTimeLayout = YES;
-    }
-    if (self.contentOffset.x > self.contentSize.width
-        && 0 != self.contentSize.width
-        )
-    {
-        self.contentOffset = CGPointMake(0, self.contentSize.width);
     }
 
     UIView *lastViewPagerItem = self.viewPagerItems.lastObject;
@@ -364,28 +361,31 @@
         self.contentSize = CGSizeZero;
         return;
     }
-    
+
     self.contentSize = CGSizeMake(
-            lastViewPagerItem.frame.origin.x + lastViewPagerItem.frame.size.width,
-            lastViewPagerItem.frame.origin.y + lastViewPagerItem.frame.size.height);
-    if (self.onPageSelected && NO == CGSizeEqualToSize(CGSizeZero, self.contentSize) && _invokeOnPageSelected) {
-        NSUInteger currentPageIndex = self.contentOffset.x / CGRectGetWidth(self.bounds);
-        if (currentPageIndex != _lastPageIndex) {
-            _lastPageIndex = currentPageIndex;
-            self.onPageSelected(@{@"position": @(currentPageIndex)});
+                                  lastViewPagerItem.frame.origin.x + lastViewPagerItem.frame.size.width,
+                                  lastViewPagerItem.frame.origin.y + lastViewPagerItem.frame.size.height
+                                  );
+    if (!_didFirstTimeLayout) {
+        [self setPage:self.initialPage animated:NO];
+        _didFirstTimeLayout = YES;
+        self.needsResetPageIndex= NO;
+    }
+    else {
+        if (self.needsResetPageIndex) {
+            [self setPage:_lastPageIndex animated:YES];
+            self.needsResetPageIndex= NO;
         }
     }
-    [self setPage:_lastPageIndex animated:YES];
-    self.needsLayoutItems = NO;
 }
 
 - (NSUInteger)nowPage {
     CGFloat nowX = self.contentOffset.x;
     NSInteger thePage = -1;
-    if (fabs(nowX)<FLT_EPSILON) {
+    if (fabs(nowX) < FLT_EPSILON) {
         return 0;
     }
-    for (int i = 0;i < self.viewPagerItems.count;i++) {
+    for (int i = 0; i < self.viewPagerItems.count; i++) {
         UIView *pageItem = self.viewPagerItems[i];
         CGPoint point = [self middlePointOfView:pageItem];
         if (point.x > nowX) {
@@ -393,7 +393,7 @@
             break;
         }
     }
-    
+
     if (thePage < 0) {
         HippyLogWarn(@"Error In ViewPager nowPage: thePage invalid");
         return 0;
@@ -410,7 +410,7 @@
 }
 
 - (CGPoint)middlePointOfView:(UIView *)view {
-    CGFloat x = view.frame.origin.x + view.frame.size.width*0.5;
+    CGFloat x = view.frame.origin.x + view.frame.size.width * 0.5;
     CGFloat y = view.frame.origin.y;
     return CGPointMake(x, y);
 }

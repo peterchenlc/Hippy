@@ -22,6 +22,7 @@ import com.tencent.mtt.hippy.common.HippyArray;
 import com.tencent.mtt.hippy.common.HippyMap;
 import com.tencent.mtt.hippy.dom.node.NodeProps;
 
+import com.tencent.mtt.hippy.utils.LogUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -29,6 +30,7 @@ import java.util.Set;
 import static com.tencent.mtt.hippy.views.custom.HippyCustomPropsController.DT_EBLID;
 
 
+@SuppressWarnings("deprecation")
 public class DiffUtils
 {
 
@@ -48,7 +50,7 @@ public class DiffUtils
 		}
 		catch (Throwable e)
 		{
-
+			LogUtils.d("DiffUtils", "diff: " + e.getMessage());
 		}
 
 		return patchTypes;
@@ -188,7 +190,7 @@ public class DiffUtils
 				boolean fromBool = (boolean) fromValue;
 				if (toValue != null && fromBool == (boolean) toValue)
 				{
-					continue;
+					LogUtils.d("DiffUtils", "don't do anything for bool value");
 				}
 				else
 				{
@@ -214,7 +216,7 @@ public class DiffUtils
 			{
 				if (toValue != null && TextUtils.equals( fromValue.toString(), toValue.toString()))
 				{
-					continue;
+					LogUtils.d("DiffUtils", "don't do anything for same value");
 				}
 				else
 				{
@@ -223,7 +225,7 @@ public class DiffUtils
 			}
 			else if (fromValue instanceof HippyArray)
 			{
-				if (toValue != null && (toValue instanceof HippyArray))
+				if (toValue instanceof HippyArray)
 				{
 					HippyArray diffResult = diffArray((HippyArray) fromValue, (HippyArray) toValue, diffLevel + 1);
 					//tintColor复用的时候必须要强制更新
@@ -243,7 +245,7 @@ public class DiffUtils
 			}
 			else if (fromValue instanceof HippyMap)
 			{
-				if (toValue != null && (toValue instanceof HippyMap))
+				if (toValue instanceof HippyMap)
 				{
 
 					HippyMap diffResult = diffProps((HippyMap) fromValue, (HippyMap) toValue, diffLevel + 1);
@@ -377,7 +379,7 @@ public class DiffUtils
 			this.renderNode = renderNode;
 		}
 
-		RenderNode	renderNode;
+		final RenderNode	renderNode;
 
 	}
 
@@ -395,15 +397,15 @@ public class DiffUtils
 			this.newId = newId;
 		}
 
-		int	oldId;
-		int	newId;
+		final int	oldId;
+		final int	newId;
 	}
 
 	public static class PropsPatch extends Patch
 	{
-		HippyMap	mPropsToUpdate;
-		int			mId;
-		String		mClassName;
+		final HippyMap	mPropsToUpdate;
+		final int			mId;
+		final String		mClassName;
 
 		public PropsPatch(HippyMap array, int tag, String className)
 		{
@@ -434,16 +436,17 @@ public class DiffUtils
 			return "ExtraPatch";
 		}
 
-		String	mClassName;
-		int		mID;
-		Object	mText;
+		final String	mClassName;
+		final int		mID;
+		final Object	mText;
 	}
 
+	@SuppressWarnings("unused")
 	public static class DeletePatch extends Patch
 	{
-		int		mId;
-		int		mPid;
-		String	mPClassName;
+		final int		mId;
+		final int		mPid;
+		final String	mPClassName;
 
 		@Override
 		public String toString()
@@ -461,15 +464,16 @@ public class DiffUtils
 		}
 	}
 
+	@SuppressWarnings("unused")
 	public static class LayoutPatch extends Patch
 	{
-		int		mX;
-		int		mY;
-		int		mHeight;
-		int		mWidth;
-		int		mId;
-		int		mParentId;
-		String	mClassName;
+		final int		mX;
+		final int		mY;
+		final int		mHeight;
+		final int		mWidth;
+		final int		mId;
+		final int		mParentId;
+		final String	mClassName;
 
 		@Override
 		public String toString()
@@ -493,8 +497,8 @@ public class DiffUtils
 
 	public static class PatchType
 	{
-		public int		mType	= -1;
-		public Patch	mPatch;
+		public final int	mType;
+		public final Patch	mPatch;
 
 		public PatchType(int type, Patch p)
 		{
@@ -545,7 +549,7 @@ public class DiffUtils
 
 	}
 
-	public static void createView(ControllerManager controllerManager, List<PatchType> patchTypes)
+	public static void createView(List<PatchType> patchTypes)
 	{
 		for (int i = 0; i < patchTypes.size(); i++)
 		{

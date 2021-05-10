@@ -25,17 +25,11 @@ import com.tencent.mtt.hippy.common.HippyHandlerThread;
 import com.tencent.mtt.hippy.common.HippyThreadRunnable;
 import com.tencent.mtt.hippy.utils.LogUtils;
 
-/**
- * @Description: TODO
- * @author: edsheng
- * @date: 2017/12/12 18:00
- * @version: V1.0
- */
-
+@SuppressWarnings({"unused"})
 public class LayoutHelper
 {
 	private HippyHandlerThread	mHandlerThread;
-	private Picture				mPicture	= new Picture();
+	private final Picture mPicture = new Picture();
 
 	public  LayoutHelper()
 	{
@@ -109,23 +103,13 @@ public class LayoutHelper
 		return maxWidth;
 	}
 
-	private boolean warmUpLayout(Layout layout)
-	{
-		boolean result;
-		try
-		{
+	private void warmUpLayout(Layout layout) {
+		try {
 			Canvas canvas = mPicture.beginRecording(getWidth(layout), getHeight(layout));
 			layout.draw(canvas);
 			mPicture.endRecording();
-			result = true;
-		}
-		catch (Exception e)
-		{
+		} catch (Exception e) {
 			LogUtils.e("TextNode", "warmUpTextLayoutCache error", e);
-			result = false;
 		}
-		return result;
 	}
-
-
 }

@@ -4,22 +4,23 @@ Properties gradleProperties = new Properties()
 def propFileDir = "$projectDir.absolutePath/../../../android/sdk/gradle.properties"
 def propFile = new File(propFileDir)
 def verifyReleaseAar = false
-def PRODUCT_FLAVORS = 'COMMON'
+def includeSupportui = true
 if (propFile.exists()) {
     gradleProperties.load(propFile.newDataInputStream())
-    PRODUCT_FLAVORS = gradleProperties.getProperty('PRODUCT_FLAVORS')
+    includeSupportui = gradleProperties.getProperty('INCLUDE_SUPPORT_UI')
 }
 
-println("=======PRODUCT_FLAVORS=" + PRODUCT_FLAVORS)
-
 android {
-    compileSdkVersion 29
-    buildToolsVersion '30.0.3'
+    compileSdkVersion 28
     defaultConfig {
         applicationId "com.tencent.mtt.hippy.example"
-        minSdkVersion 21
+        minSdkVersion 17
         // noinspection ExpiredTargetSdkVersion
-        targetSdkVersion 29
+        //noinspection OldTargetApi
+        targetSdkVersion 28
+        ndk  {
+            abiFilters 'arm64-v8a'
+        }
     }
 
     signingConfigs {
@@ -33,7 +34,7 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
+            minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
         }
@@ -49,7 +50,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.1.0+'
+        classpath 'com.android.tools.build:gradle:4.1.3'
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
@@ -57,13 +58,9 @@ buildscript {
 
 allprojects {
     ext {
-        Properties localProperties = new Properties()
-        InputStream inputStream = project.rootProject.file('local.properties').newDataInputStream()
-        localProperties.load(inputStream)
-
-        MAVEN_USER = localProperties.getProperty('maven_username')
-        MAVEN_PWD = localProperties.getProperty('maven_password')
-        MAVEN_URL = localProperties.getProperty('maven_url')
+        MAVEN_USER = System.getenv('maven_username')
+        MAVEN_PWD = System.getenv('maven_password')
+        MAVEN_URL = System.getenv('maven_url')
     }
     repositories {
         if (MAVEN_URL != null) {
@@ -89,9 +86,10 @@ dependencies {
     } else {
         api project(path: ':android-sdk')
     }
+    //noinspection GradleDependency
     api 'com.github.bumptech.glide:glide:3.6.1'
     api 'com.android.support:support-v4:28.0.0'
-    if (PRODUCT_FLAVORS == 'QB') {
+    if (!includeSupportui) {
         implementation 'com.tencent.mtt:support-ui:99.1.0'
     }
 }
